@@ -1,38 +1,13 @@
-use assert_cmd::Command;
-use predicates::prelude::*;
-use serde_json::Value;
-use std::fs;
-use std::process;
-
+#![allow(unused)]
 fn main() {
-    let file_content = match fs::read_to_string("test_data.json") {
-        Ok(content) => content,
-        Err(err) => {
-            eprintln!("Unable to read file: {}", err);
-            process::exit(1);
-        }
-    };
+    use std::process::Command;
 
-    let json_data: Value = match serde_json::from_str(&file_content) {
-        Ok(data) => data,
-        Err(err) => {
-            eprintln!("JSON was not well-formatted: {}", err);
-            process::exit(1);
-        }
-    };
-
-    let predicate = predicate::function(|json: &str| {
-        let parsed_json: Value = serde_json::from_str(json).unwrap();
-        parsed_json == json_data
-    });
-
-    let mut cmd = match Command::cargo_bin("your_cli_app") {
-        Ok(command) => command,
-        Err(err) => {
-            eprintln!("Binary not found: {}", err);
-            process::exit(1);
-        }
-    };
-
-    cmd.assert().success().stdout(predicate);
+    let mut echo_hello = Command::new("bash");
+    echo_hello.arg("-c").arg("echo hello");
+    let hello_1 = echo_hello.output().expect("failed to execute process");
+    assert!(hello_1.status.success(), "First command failed");
+    println!("First command executed successfully");
+    let hello_2 = echo_hello.output().expect("failed to execute process");
+    assert!(hello_2.status.success(), "Second command failed");
+    println!("Second command executed successfully");
 }
