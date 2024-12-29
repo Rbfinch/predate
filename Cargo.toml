@@ -8,7 +8,7 @@ description = "Catch bugs through automated system testing of a cli application"
 
 [dependencies]
 chrono = "0.4.39"
-clap = "4.5.23"
+clap = { version = "4.5.23", features = ["derive", "cargo"] }
 json-predicate = "0.1.16"
 predicates = "3.1.3"
 serde_json = "1.0.134"
