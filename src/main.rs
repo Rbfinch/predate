@@ -1,5 +1,5 @@
 use chrono::prelude::*;
-use clap::{Parser, ArgAction}; // Correct the import for Parser and add ArgAction
+use clap::{ArgAction, Parser}; // Correct the import for Parser and add ArgAction
 use serde_json::json;
 use serde_yaml::Value;
 use std::collections::HashMap;
@@ -23,9 +23,11 @@ struct Cli {
     json_out: bool,
 
     /// Control flag
-    #[arg(short, long, 
+    #[arg(
+        short ='c',
+        long = "control", 
         action = ArgAction::SetTrue,
-        help = "Set the control flag")]
+        help = "Set the control ")]
     control: bool,
 
     /// Path to the tests YAML file
