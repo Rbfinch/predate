@@ -3,6 +3,11 @@ TBD
 
 Unreleased changes. Release notes have not yet been written.
 
+0.1.3
+=====
+
+* minor changes to README.md
+
 0.1.2
 =====
 
