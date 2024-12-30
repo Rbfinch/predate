@@ -1,10 +1,17 @@
 [package]
 name = "predate"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 authors = ["Nicholas D. Crosbie"]
 license = "MIT"
 description = "Catch bugs and performance regressions through automated system testing"
+homepage = "https://github.com/Rbfinch/predate"
+documentation = "https://github.com/Rbfinch/predate"
+repository = "https://github.com/Rbfinch/predate"
+readme = "README.md"
+categories = ["command-line-utilities"]
+keywords = ["CLI", "testing", "system-testing", "performance-regression"]
+
 
 [dependencies]
 chrono = "0.4.39"
