@@ -1,3 +1,5 @@
+<img src="src/predate-icon.svg" width="128" />
+
 _Catch bugs and performance regressions through automated system testing_
 
 [![Crates.io](https://img.shields.io/crates/v/predate.svg)](https://crates.io/crates/predate)
