@@ -10,7 +10,7 @@ documentation = "https://github.com/Rbfinch/predate"
 repository = "https://github.com/Rbfinch/predate"
 readme = "README.md"
 categories = ["command-line-utilities"]
-keywords = ["CLI", "testing", "system-testing", "performance-regression"]
+keywords = ["CLI", "testing", "system-testing", "performance"]
 
 
 [dependencies]
