@@ -11,7 +11,13 @@ use std::process::Command as ProcessCommand;
 use std::time::{Instant, SystemTime}; // Rename to avoid conflict with clap::Command
 
 #[derive(Parser)]
-#[command(name = "predate")]
+#[command(
+    name = "predate",
+    author = "Nicholas D. Crosbie",
+    version = clap::crate_version!(),
+    about = "Catch bugs and performance regressions through automated system testing",
+    long_about = "Copyright (c) 2024 Nicholas D. Crosbie, licensed under the MIT License."
+)]
 struct Cli {
     /// Write output to a JSON file
     #[arg(
@@ -170,7 +176,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                         "test": test,
                         "status": "passed",
                         "duration": duration_value.trim(),
-                        "units": duration_unit.trim()
+                        "units": duration_unit.trim(),
+                        "command": command
                     }));
                 }
             }
@@ -221,7 +228,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                         "test": test,
                         "status": "passed",
                         "duration": duration_value.trim(),
-                        "units": duration_unit.trim()
+                        "units": duration_unit.trim(),
+                        "command": format!("{} > /tmp/{}.txt", command, test)
                     }));
                 }
             }
@@ -262,7 +270,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     "test": test,
                     "status": "passed",
                     "duration": duration_value.trim(),
-                    "units": duration_unit.trim()
+                    "units": duration_unit.trim(),
+                    "command": command
                 }));
             }
         }
