@@ -3,6 +3,11 @@ TBD
 
 Unreleased changes. Release notes have not yet been written.
 
+0.1.4
+=====
+
+* replaced stat call with Rust's `metadata` call
+
 0.1.3
 =====
 
