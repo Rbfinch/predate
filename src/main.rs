@@ -5,6 +5,7 @@ use serde_yaml::Value;
 use std::collections::HashMap;
 use std::env;
 use std::fs;
+use std::fs::metadata;
 use std::fs::File;
 use std::io::Write;
 use std::process::Command as ProcessCommand;
@@ -65,14 +66,6 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let now: DateTime<Utc> = Utc::now();
     let now_str = now.to_rfc3339();
     println!("Current date and time: {}", now_str);
-
-    let stat_cmd = if os_type == "linux" {
-        "stat -c %s"
-    } else if os_type == "macos" {
-        "stat -f %z"
-    } else {
-        return Err("OS: Unknown".into());
-    };
 
     // Check if the control flag is provided
     let grepq = if cli.control {
@@ -138,13 +131,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             ProcessCommand::new("sh").arg("-c").arg(command).output()?
         } else if test == "test-10" {
             ProcessCommand::new("sh").arg("-c").arg(command).output()?;
-            let actual_size = ProcessCommand::new("sh")
-                .arg("-c")
-                .arg(format!("{} matches.json", stat_cmd))
-                .output()?;
-            let actual_size = String::from_utf8_lossy(&actual_size.stdout)
-                .trim()
-                .parse::<i64>()?;
+            let actual_size = metadata("matches.json")?.len() as i64;
             if actual_size != expected_sizes[test] {
                 println!("\n{}{} failed{}", orange, test, reset);
                 println!(
@@ -187,13 +174,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 .arg("-c")
                 .arg(format!("{} > /tmp/{}.txt", command, test))
                 .output()?;
-            let actual_size = ProcessCommand::new("sh")
-                .arg("-c")
-                .arg(format!("{} /tmp/{}.txt", stat_cmd, test))
-                .output()?;
-            let actual_size = String::from_utf8_lossy(&actual_size.stdout)
-                .trim()
-                .parse::<i64>()?;
+            let actual_size = metadata(format!("/tmp/{}.txt", test))?.len() as i64;
             if actual_size != expected_sizes[test] {
                 println!("\n{}{} failed{}", orange, test, reset);
                 println!(
