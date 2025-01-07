@@ -121,6 +121,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut json_output = vec![];
 
+    let mut passing_tests = 0;
+    let mut failing_tests = 0;
+
     for test in test_order {
         println!("{}{}{}", bold, test, reset);
         let command = &tests[test];
@@ -149,6 +152,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                         "command": command
                     }));
                 }
+                failing_tests += 1;
             } else {
                 let duration = start_time.elapsed();
                 let duration_str = format!("{:?}", duration);
@@ -167,6 +171,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                         "command": command
                     }));
                 }
+                passing_tests += 1;
             }
             continue;
         } else {
@@ -195,6 +200,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                         "command": format!("{} > /tmp/{}.txt", command, test)
                     }));
                 }
+                failing_tests += 1;
             } else {
                 let duration = start_time.elapsed();
                 let duration_str = format!("{:?}", duration);
@@ -213,6 +219,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                         "command": format!("{} > /tmp/{}.txt", command, test)
                     }));
                 }
+                passing_tests += 1;
             }
             continue;
         };
@@ -237,6 +244,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     "command": command
                 }));
             }
+            failing_tests += 1;
         } else {
             let duration = start_time.elapsed();
             let duration_str = format!("{:?}", duration);
@@ -255,8 +263,13 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                     "command": command
                 }));
             }
+            passing_tests += 1;
         }
     }
+
+    println!("\nSummary:");
+    println!("Passing tests: {}", passing_tests);
+    println!("Failing tests: {}", failing_tests);
 
     if cli.json_out {
         let file_name = format!("{}.json", now_str); // Generate a default file name

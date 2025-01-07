@@ -7,13 +7,13 @@ _Catch bugs and performance regressions through automated system testing_
 
 ## What is this?
 
-Many CLI applications take an input file and generate an output file and/or write some value(s) to standard out, with various options set by the user. `predate` is a simple example of how to test that the application is producing correct output given the arguments specified on the command line.
+Many CLI applications take an input file and generate an output file and/or write some value(s) to standard out, with various options set by the user. `predate` is a simple example of how to test that the application is producing correct output given the arguments specified on the command line. Whilst there are libraries that can be used to test CLI applications, `predate` is a simple example of how to do this without the need for additional dependencies, and where the commands and expected output are conveniently specified in a YAML file.
 
-`predate` is used to test the output of `grepq` (<https://crates.io/crates/grepq>), and record the execution time of `grepq` commands to avoid performance regression.  
+`predate` is used to test the output of `grepq` (<https://crates.io/crates/grepq>), and record the execution time of `grepq` commands to avoid performance regression. Whilst `predate` is specific to testing of `grepq`, the code should be easily adapted for testing other CLI applications.
 
 ## Requirements
 
-- `predate` has been tested on Linux and macOS. It might work on Windows, but it has not been tested.
+- `predate` has been tested on Linux and macOS. It might work on Windows, but it has not been tested
 - Ensure that Rust is installed on your system (<https://www.rust-lang.org/tools/install>)
 - If the build fails, make sure you have the latest version of the Rust compiler by running `rustup update`
 
@@ -29,6 +29,9 @@ Many CLI applications take an input file and generate an output file and/or writ
   - Make sure the executable is in your `PATH` or use the full path to the executable
 
 ## How to use
+
+>[!NOTE]
+`predate` is specifically used to test `grepq`
 
 ```bash
 cd /path/to/grepq/examples
@@ -46,10 +49,6 @@ Options:
   -c, --control   Set the control
   -h, --help      Print help
 ```
-
-# So what?
-
-Whilst `predate` is specific to testing of `grepq`, the code should be easily adapted for testing other CLI applications.
 
 ## Update changes
 
