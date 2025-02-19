@@ -21,3 +21,27 @@ expected_sizes:
   test-8: 2447
   test-9: 411
   test-10: 2689
+
+comparisons:
+  test-1: "size"
+  test-2: "size"
+  test-3: "size"
+  test-4: "size"
+  test-5: "size"
+  test-6: "size"
+  test-7: "count"
+  test-8: "count"
+  test-9: "size"
+  test-10: "size"
+
+output_files:
+  test-1: "/tmp/test-1.txt"
+  test-2: "/tmp/test-2.txt"
+  test-3: "/tmp/test-3.txt"
+  test-4: "/tmp/test-4.txt"
+  test-5: "/tmp/test-5.txt"
+  test-6: "/tmp/test-6.txt"
+  test-7: "/tmp/test-7.txt"
+  test-8: "/tmp/test-8.txt"
+  test-9: "/tmp/test-9.txt"
+  test-10: "matches.json"

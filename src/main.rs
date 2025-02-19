@@ -76,18 +76,30 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     let test_file = &cli.path_to_tests_yaml;
 
-    // Load tests and expected sizes from YAML file
+    // Load tests, expected sizes, and comparisons from YAML file
     let yaml_content = fs::read_to_string(test_file)?;
     let yaml: Value = serde_yaml::from_str(&yaml_content)?;
     let tests_yaml = &yaml["tests"];
     let expected_sizes_yaml = &yaml["expected_sizes"];
+    let comparisons_yaml = &yaml["comparisons"];
+    let output_files_yaml = &yaml["output_files"];
 
     let mut tests = HashMap::new();
     let mut expected_sizes = HashMap::new();
+    let mut comparisons = HashMap::new();
+    let mut output_files = HashMap::new();
 
-    if let (Some(tests_yaml), Some(expected_sizes_yaml)) =
-        (tests_yaml.as_mapping(), expected_sizes_yaml.as_mapping())
-    {
+    if let (
+        Some(tests_yaml),
+        Some(expected_sizes_yaml),
+        Some(comparisons_yaml),
+        Some(output_files_yaml),
+    ) = (
+        tests_yaml.as_mapping(),
+        expected_sizes_yaml.as_mapping(),
+        comparisons_yaml.as_mapping(),
+        output_files_yaml.as_mapping(),
+    ) {
         for (key, value) in tests_yaml {
             let key = key.as_str().unwrap();
             let value = value.as_str().unwrap().replace("$GREPQ", grepq);
@@ -97,6 +109,16 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             let key = key.as_str().unwrap();
             let value = value.as_i64().unwrap();
             expected_sizes.insert(key.to_string(), value);
+        }
+        for (key, value) in comparisons_yaml {
+            let key = key.as_str().unwrap();
+            let value = value.as_str().unwrap();
+            comparisons.insert(key.to_string(), value);
+        }
+        for (key, value) in output_files_yaml {
+            let key = key.as_str().unwrap();
+            let value = value.as_str().unwrap().to_string();
+            output_files.insert(key.to_string(), value);
         }
     }
 
@@ -130,140 +152,108 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         println!("{}", command);
 
         let start_time = Instant::now();
-        let output = if test == "test-7" || test == "test-8" {
-            ProcessCommand::new("sh").arg("-c").arg(command).output()?
-        } else if test == "test-10" {
-            ProcessCommand::new("sh").arg("-c").arg(command).output()?;
-            let actual_size = metadata("matches.json")?.len() as i64;
-            if actual_size != expected_sizes[test] {
-                println!("\n{}{} failed{}", orange, test, reset);
-                println!(
-                    "{}expected: {} bytes{}",
-                    orange, expected_sizes[test], reset
-                );
-                println!("{}got: {} bytes{}", orange, actual_size, reset);
-                println!("{}command was: {}{}", orange, command, reset);
-                if cli.json_out {
-                    json_output.push(json!({
-                        "test": test,
-                        "status": "failed",
-                        "expected": expected_sizes[test],
-                        "got": actual_size,
-                        "command": command
-                    }));
-                }
-                failing_tests += 1;
-            } else {
-                let duration = start_time.elapsed();
-                let duration_str = format!("{:?}", duration);
-                let (duration_value, duration_unit) = duration_str.split_at(
-                    duration_str
-                        .find(|c: char| !c.is_numeric() && c != '.')
-                        .unwrap_or(duration_str.len()),
-                );
-                println!("Test {} completed in {:?}", test, duration);
-                if cli.json_out {
-                    json_output.push(json!({
-                        "test": test,
-                        "status": "passed",
-                        "duration": duration_value.trim(),
-                        "units": duration_unit.trim(),
-                        "command": command
-                    }));
-                }
-                passing_tests += 1;
-            }
-            continue;
-        } else {
-            ProcessCommand::new("sh")
-                .arg("-c")
-                .arg(format!("{} > /tmp/{}.txt", command, test))
-                .output()?;
-            let actual_size = metadata(format!("/tmp/{}.txt", test))?.len() as i64;
-            if actual_size != expected_sizes[test] {
-                println!("\n{}{} failed{}", orange, test, reset);
-                println!(
-                    "{}expected: {} bytes{}",
-                    orange, expected_sizes[test], reset
-                );
-                println!("{}got: {} bytes{}", orange, actual_size, reset);
-                println!(
-                    "{}command was: {} > /tmp/{}.txt{}",
-                    orange, command, test, reset
-                );
-                if cli.json_out {
-                    json_output.push(json!({
-                        "test": test,
-                        "status": "failed",
-                        "expected": expected_sizes[test],
-                        "got": actual_size,
-                        "command": format!("{} > /tmp/{}.txt", command, test)
-                    }));
-                }
-                failing_tests += 1;
-            } else {
-                let duration = start_time.elapsed();
-                let duration_str = format!("{:?}", duration);
-                let (duration_value, duration_unit) = duration_str.split_at(
-                    duration_str
-                        .find(|c: char| !c.is_numeric() && c != '.')
-                        .unwrap_or(duration_str.len()),
-                );
-                println!("Test {} completed in {:?}", test, duration);
-                if cli.json_out {
-                    json_output.push(json!({
-                        "test": test,
-                        "status": "passed",
-                        "duration": duration_value.trim(),
-                        "units": duration_unit.trim(),
-                        "command": format!("{} > /tmp/{}.txt", command, test)
-                    }));
-                }
-                passing_tests += 1;
-            }
-            continue;
-        };
+        let comparison = comparisons.get(test).unwrap_or(&"");
 
-        let actual_count = String::from_utf8_lossy(&output.stdout)
-            .trim()
-            .parse::<i64>()?;
-        if actual_count != expected_sizes[test] {
-            println!("\n{}{} failed{}", orange, test, reset);
-            println!(
-                "{}expected: {} counts{}",
-                orange, expected_sizes[test], reset
-            );
-            println!("{}got: {} counts{}", orange, actual_count, reset);
-            println!("{}command was: {}{}", orange, command, reset);
-            if cli.json_out {
-                json_output.push(json!({
-                    "test": test,
-                    "status": "failed",
-                    "expected": expected_sizes[test],
-                    "got": actual_count,
-                    "command": command
-                }));
+        match *comparison {
+            "size" => {
+                let default_path = format!("/tmp/{}.txt", test);
+                let output_file = output_files.get(test).cloned().unwrap_or(default_path);
+                ProcessCommand::new("sh")
+                    .arg("-c")
+                    .arg(format!("{} > {}", command, output_file))
+                    .output()?;
+                let actual_size = metadata(&output_file)?.len() as i64;
+                if actual_size != expected_sizes[test] {
+                    println!("\n{}{} failed{}", orange, test, reset);
+                    println!(
+                        "{}expected: {} bytes{}",
+                        orange, expected_sizes[test], reset
+                    );
+                    println!("{}got: {} bytes{}", orange, actual_size, reset);
+                    println!(
+                        "{}command was: {} > {}{}",
+                        orange, command, output_file, reset
+                    );
+                    if cli.json_out {
+                        json_output.push(json!({
+                            "test": test,
+                            "status": "failed",
+                            "expected": expected_sizes[test],
+                            "got": actual_size,
+                            "command": format!("{} > {}", command, output_file)
+                        }));
+                    }
+                    failing_tests += 1;
+                } else {
+                    let duration = start_time.elapsed();
+                    let duration_str = format!("{:?}", duration);
+                    let (duration_value, duration_unit) = duration_str.split_at(
+                        duration_str
+                            .find(|c: char| !c.is_numeric() && c != '.')
+                            .unwrap_or(duration_str.len()),
+                    );
+                    println!("Test {} completed in {:?}", test, duration);
+                    if cli.json_out {
+                        json_output.push(json!({
+                            "test": test,
+                            "status": "passed",
+                            "duration": duration_value.trim(),
+                            "units": duration_unit.trim(),
+                            "command": format!("{} > {}", command, output_file)
+                        }));
+                    }
+                    passing_tests += 1;
+                }
             }
-            failing_tests += 1;
-        } else {
-            let duration = start_time.elapsed();
-            let duration_str = format!("{:?}", duration);
-            let (duration_value, duration_unit) = duration_str.split_at(
-                duration_str
-                    .find(|c: char| !c.is_numeric() && c != '.')
-                    .unwrap_or(duration_str.len()),
-            );
-            println!("Test {} completed in {:?}", test, duration);
-            if cli.json_out {
-                json_output.push(json!({
-                    "test": test,
-                    "status": "passed",
-                    "duration": duration_value.trim(),
-                    "units": duration_unit.trim(),
-                    "command": command
-                }));
+            "count" => {
+                let output = ProcessCommand::new("sh").arg("-c").arg(command).output()?;
+                let actual_count = String::from_utf8_lossy(&output.stdout)
+                    .trim()
+                    .parse::<i64>()?;
+                if actual_count != expected_sizes[test] {
+                    println!("\n{}{} failed{}", orange, test, reset);
+                    println!(
+                        "{}expected: {} counts{}",
+                        orange, expected_sizes[test], reset
+                    );
+                    println!("{}got: {} counts{}", orange, actual_count, reset);
+                    println!("{}command was: {}{}", orange, command, reset);
+                    if cli.json_out {
+                        json_output.push(json!({
+                            "test": test,
+                            "status": "failed",
+                            "expected": expected_sizes[test],
+                            "got": actual_count,
+                            "command": command
+                        }));
+                    }
+                    failing_tests += 1;
+                } else {
+                    let duration = start_time.elapsed();
+                    let duration_str = format!("{:?}", duration);
+                    let (duration_value, duration_unit) = duration_str.split_at(
+                        duration_str
+                            .find(|c: char| !c.is_numeric() && c != '.')
+                            .unwrap_or(duration_str.len()),
+                    );
+                    println!("Test {} completed in {:?}", test, duration);
+                    if cli.json_out {
+                        json_output.push(json!({
+                            "test": test,
+                            "status": "passed",
+                            "duration": duration_value.trim(),
+                            "units": duration_unit.trim(),
+                            "command": command
+                        }));
+                    }
+                    passing_tests += 1;
+                }
             }
-            passing_tests += 1;
+            _ => {
+                println!("\n{}{} failed{}", orange, test, reset);
+                println!("{}Unknown comparison type: {}{}", orange, comparison, reset);
+                failing_tests += 1;
+            }
         }
     }
 
