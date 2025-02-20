@@ -10,6 +10,8 @@ use std::fs::File;
 use std::io::Write;
 use std::process::Command as ProcessCommand;
 use std::time::{Instant, SystemTime}; // Rename to avoid conflict with clap::Command
+                                      // Add sha2 imports
+use sha2::{Digest, Sha256};
 
 #[derive(Parser)]
 #[command(
@@ -56,29 +58,34 @@ fn main() {
 fn run() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
-    // Print the operating system and CPU architecture
+    // Print system info
     let os_type = env::consts::OS;
     let cpu_arch = env::consts::ARCH;
     println!("OS: {}", os_type);
     println!("CPU: {}", cpu_arch);
 
-    // Print the current date and time in ISO 8601 format
     let now: DateTime<Utc> = Utc::now();
     let now_str = now.to_rfc3339();
     println!("Current date and time: {}", now_str);
 
-    // Check if the control flag is provided
-    let grepq = if cli.control {
-        "grepq"
-    } else {
-        "../target/release/grepq"
-    };
-
     let test_file = &cli.path_to_tests_yaml;
 
-    // Load tests, expected sizes, and comparisons from YAML file
+    // Load configuration from YAML file
     let yaml_content = fs::read_to_string(test_file)?;
     let yaml: Value = serde_yaml::from_str(&yaml_content)?;
+
+    // Get application paths
+    let app_path = if cli.control {
+        yaml["applications"]["control"]
+            .as_str()
+            .ok_or("Missing control application path")?
+    } else {
+        yaml["applications"]["test"]
+            .as_str()
+            .ok_or("Missing test application path")?
+    };
+
+    // Load test configurations
     let tests_yaml = &yaml["tests"];
     let expected_sizes_yaml = &yaml["expected_sizes"];
     let comparisons_yaml = &yaml["comparisons"];
@@ -102,7 +109,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     ) {
         for (key, value) in tests_yaml {
             let key = key.as_str().unwrap();
-            let value = value.as_str().unwrap().replace("$GREPQ", grepq);
+            let value = value.as_str().unwrap().replace("$APP", app_path);
             tests.insert(key.to_string(), value);
         }
         for (key, value) in expected_sizes_yaml {
@@ -122,11 +129,15 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    // Using an array to maintain the order of the tests
-    let test_order = vec![
-        "test-1", "test-2", "test-3", "test-4", "test-5", "test-6", "test-7", "test-8", "test-9",
-        "test-10",
-    ];
+    // Using a vector to maintain the order of the tests
+    let mut test_order = vec![];
+    if let Some(tests_yaml) = tests_yaml.as_mapping() {
+        for key in tests_yaml.keys() {
+            if let Some(key_str) = key.as_str() {
+                test_order.push(key_str.to_string());
+            }
+        }
+    }
 
     // Color codes
     let bold = "\x1b[1m";
@@ -146,7 +157,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let mut passing_tests = 0;
     let mut failing_tests = 0;
 
-    for test in test_order {
+    for test in &test_order {
         println!("{}{}{}", bold, test, reset);
         let command = &tests[test];
         println!("{}", command);
@@ -244,6 +255,59 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                             "duration": duration_value.trim(),
                             "units": duration_unit.trim(),
                             "command": command
+                        }));
+                    }
+                    passing_tests += 1;
+                }
+            }
+            "sha256" => {
+                let default_path = format!("/tmp/{}.txt", test);
+                let output_file = output_files.get(test).cloned().unwrap_or(default_path);
+                ProcessCommand::new("sh")
+                    .arg("-c")
+                    .arg(format!("{} > {}", command, output_file))
+                    .output()?;
+
+                let content = fs::read(&output_file)?;
+                let mut hasher = Sha256::new();
+                hasher.update(&content);
+                let actual_hash = format!("{:x}", hasher.finalize());
+                let expected_hash = comparisons[test];
+
+                if actual_hash != expected_hash {
+                    println!("\n{}{} failed{}", orange, test, reset);
+                    println!("{}expected hash: {}{}", orange, expected_hash, reset);
+                    println!("{}got hash: {}{}", orange, actual_hash, reset);
+                    println!(
+                        "{}command was: {} > {}{}",
+                        orange, command, output_file, reset
+                    );
+                    if cli.json_out {
+                        json_output.push(json!({
+                            "test": test,
+                            "status": "failed",
+                            "expected": expected_hash,
+                            "got": actual_hash,
+                            "command": format!("{} > {}", command, output_file)
+                        }));
+                    }
+                    failing_tests += 1;
+                } else {
+                    let duration = start_time.elapsed();
+                    let duration_str = format!("{:?}", duration);
+                    let (duration_value, duration_unit) = duration_str.split_at(
+                        duration_str
+                            .find(|c: char| !c.is_numeric() && c != '.')
+                            .unwrap_or(duration_str.len()),
+                    );
+                    println!("Test {} completed in {:?}", test, duration);
+                    if cli.json_out {
+                        json_output.push(json!({
+                            "test": test,
+                            "status": "passed",
+                            "duration": duration_value.trim(),
+                            "units": duration_unit.trim(),
+                            "command": format!("{} > {}", command, output_file)
                         }));
                     }
                     passing_tests += 1;

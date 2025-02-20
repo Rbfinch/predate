@@ -1,0 +1,15 @@
+applications:
+  control: /path/to/control/app
+  test: /path/to/test/app
+
+tests:
+  test1: "$APP --generate-output"
+
+comparisons:
+  test1: "sha256"
+
+expected_sizes:
+  test1: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" # example hash
+
+output_files:
+  test1: "/tmp/test1_output.txt"
